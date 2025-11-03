@@ -3,7 +3,7 @@ FastAPI Backend para AWS SES v2
 Maneja automáticamente la firma de AWS y envío de emails
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
@@ -243,14 +243,14 @@ async def send_email(request: SendEmailRequest):
 
 @app.post("/send-simple-email")
 async def send_simple_email(
-    access_key: str,
-    secret_key: str,
-    region: str,
-    from_email: str,
-    to_email: str,
-    subject: str,
-    message: str,
-    html_message: Optional[str] = None
+    access_key: str = Form(...),
+    secret_key: str = Form(...),
+    region: str = Form(...),
+    from_email: str = Form(...),
+    to_email: str = Form(...),
+    subject: str = Form(...),
+    message: str = Form(...),
+    html_message: Optional[str] = Form(None)
 ):
     """
     Endpoint simplificado para envío rápido de emails
