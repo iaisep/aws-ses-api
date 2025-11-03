@@ -275,7 +275,7 @@ async def send_simple_email(
     from_email: str = Form(...),
     to_email: str = Form(...),
     subject: str = Form(...),
-    message: str = Form(...),
+    message: str = Form(""),
     html_message: Optional[str] = Form(None)
 ):
     """
@@ -292,6 +292,16 @@ async def send_simple_email(
                 detail="Los emails deben tener formato válido"
             )
         
+        # Validar que al menos uno de los campos de contenido tenga valor
+        if not message and not html_message:
+            raise HTTPException(
+                status_code=400,
+                detail="Debe proporcionar al menos 'message' o 'html_message'"
+            )
+        
+        # Si no hay mensaje de texto pero sí HTML, usar un texto por defecto
+        text_body = message if message else "Este email contiene contenido HTML. Por favor, usa un cliente de email que soporte HTML para ver el contenido completo."
+        
         # Crear la solicitud usando el modelo completo
         simple_request = SendEmailRequest(
             credentials=AWSCredentials(
@@ -305,7 +315,7 @@ async def send_simple_email(
             ),
             content=EmailContent(
                 subject=subject,
-                text_body=message,
+                text_body=text_body,
                 html_body=html_message
             )
         )
