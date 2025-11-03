@@ -256,6 +256,16 @@ async def send_simple_email(
     Endpoint simplificado para envío rápido de emails
     """
     try:
+        # Log de entrada para debugging
+        logger.info(f"Recibida solicitud simple: from={from_email}, to={to_email}, region={region}")
+        
+        # Validar emails básico
+        if "@" not in from_email or "@" not in to_email:
+            raise HTTPException(
+                status_code=400,
+                detail="Los emails deben tener formato válido"
+            )
+        
         # Crear la solicitud usando el modelo completo
         simple_request = SendEmailRequest(
             credentials=AWSCredentials(
@@ -277,17 +287,48 @@ async def send_simple_email(
         # Usar el endpoint principal
         return await send_email(simple_request)
         
+    except HTTPException:
+        # Re-raise HTTPExceptions as-is
+        raise
     except Exception as e:
-        logger.error(f"Error en send_simple_email: {str(e)}")
+        error_msg = str(e) if str(e) else "Error desconocido"
+        logger.error(f"Error en send_simple_email: {error_msg}")
+        logger.error(f"Tipo de error: {type(e).__name__}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error enviando email: {str(e)}"
+            detail=f"Error enviando email: {error_msg}"
         )
 
 @app.get("/docs")
 async def custom_docs():
     """Redirige a la documentación automática de FastAPI"""
     return {"message": "Documentación disponible en /docs"}
+
+@app.post("/test-endpoint")
+async def test_endpoint(
+    access_key: str = Form(...),
+    secret_key: str = Form(...),
+    region: str = Form(...),
+    from_email: str = Form(...),
+    to_email: str = Form(...),
+    subject: str = Form(...),
+    message: str = Form(...)
+):
+    """
+    Endpoint de prueba que valida parámetros sin enviar email real
+    """
+    return {
+        "status": "success",
+        "message": "Parámetros recibidos correctamente",
+        "data": {
+            "region": region,
+            "from_email": from_email,
+            "to_email": to_email,
+            "subject": subject,
+            "message_length": len(message),
+            "access_key_prefix": access_key[:4] + "..." if len(access_key) > 4 else "short"
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
