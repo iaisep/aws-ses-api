@@ -352,16 +352,32 @@ async def test_aws_credentials(
             region_name=region.strip()
         )
         
-        # Intentar una operación simple que no envía email
-        response = ses_client.get_send_quota()
-        
-        return {
-            "status": "success",
-            "message": "Credenciales AWS válidas",
-            "send_quota": response.get('Max24HourSend', 'N/A'),
-            "sent_last_24h": response.get('SentLast24Hours', 'N/A'),
-            "send_rate": response.get('MaxSendRate', 'N/A')
-        }
+        # Intentar una operación simple que no envía email (SES v2)
+        try:
+            # Usar get_account para verificar que las credenciales funcionan
+            response = ses_client.get_account()
+            
+            return {
+                "status": "success",
+                "message": "Credenciales AWS válidas (método get_account)",
+                "production_access": response.get('ProductionAccessEnabled', False),
+                "enforcement_status": response.get('EnforcementStatus', 'N/A'),
+                "sending_enabled": response.get('SendingEnabled', False)
+            }
+        except Exception as account_error:
+            # Si get_account falla, intentar con list_configuration_sets
+            logger.info(f"get_account failed, trying list_configuration_sets: {str(account_error)}")
+            try:
+                response = ses_client.list_configuration_sets(PageSize=1)
+                return {
+                    "status": "success", 
+                    "message": "Credenciales AWS válidas (método list_configuration_sets)",
+                    "config_sets_available": len(response.get('ConfigurationSets', []))
+                }
+            except Exception as list_error:
+                # Si ambos fallan, las credenciales probablemente son inválidas
+                logger.error(f"Both methods failed: {str(list_error)}")
+                raise Exception(f"No se pudieron validar las credenciales: {str(list_error)}")
         
     except NoCredentialsError:
         logger.error("Credenciales AWS inválidas o faltantes")
