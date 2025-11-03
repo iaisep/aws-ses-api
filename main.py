@@ -5,12 +5,13 @@ Maneja automáticamente la firma de AWS y envío de emails
 
 from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from typing import List, Optional, Dict, Any
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 import logging
 from datetime import datetime
+import urllib.parse
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,26 @@ class AWSCredentials(BaseModel):
     access_key: str
     secret_key: str
     region: str = "us-east-1"
+    
+    @validator('access_key')
+    def validate_access_key(cls, v):
+        if not v or len(v.strip()) == 0:
+            raise ValueError('Access key no puede estar vacío')
+        # Limpiar espacios y caracteres no deseados
+        return v.strip()
+    
+    @validator('secret_key')
+    def validate_secret_key(cls, v):
+        if not v or len(v.strip()) == 0:
+            raise ValueError('Secret key no puede estar vacío')
+        # Limpiar espacios pero mantener caracteres especiales
+        return v.strip()
+    
+    @validator('region')
+    def validate_region(cls, v):
+        if not v or len(v.strip()) == 0:
+            raise ValueError('Región no puede estar vacía')
+        return v.strip()
 
 class EmailDestination(BaseModel):
     to_addresses: List[EmailStr]
@@ -93,6 +114,11 @@ async def send_email(request: SendEmailRequest):
     - **tags**: (Opcional) Tags para el email
     """
     try:
+        # Log de debugging (sin exponer credenciales completas)
+        logger.info(f"Creando cliente AWS SES para región: {request.credentials.region}")
+        logger.info(f"Access key prefix: {request.credentials.access_key[:4]}...")
+        logger.info(f"Secret key length: {len(request.credentials.secret_key)}")
+        
         # Crear cliente SES v2 con las credenciales proporcionadas
         ses_client = boto3.client(
             'sesv2',
@@ -303,6 +329,61 @@ async def send_simple_email(
 async def custom_docs():
     """Redirige a la documentación automática de FastAPI"""
     return {"message": "Documentación disponible en /docs"}
+
+@app.post("/test-aws-credentials")
+async def test_aws_credentials(
+    access_key: str = Form(...),
+    secret_key: str = Form(...),
+    region: str = Form(...)
+):
+    """
+    Endpoint de prueba para validar credenciales AWS sin enviar email
+    """
+    try:
+        logger.info(f"Testing AWS credentials for region: {region}")
+        logger.info(f"Access key prefix: {access_key[:4]}...")
+        logger.info(f"Secret key length: {len(secret_key)}")
+        
+        # Crear cliente SES v2 para probar credenciales
+        ses_client = boto3.client(
+            'sesv2',
+            aws_access_key_id=access_key.strip(),
+            aws_secret_access_key=secret_key.strip(),
+            region_name=region.strip()
+        )
+        
+        # Intentar una operación simple que no envía email
+        response = ses_client.get_send_quota()
+        
+        return {
+            "status": "success",
+            "message": "Credenciales AWS válidas",
+            "send_quota": response.get('Max24HourSend', 'N/A'),
+            "sent_last_24h": response.get('SentLast24Hours', 'N/A'),
+            "send_rate": response.get('MaxSendRate', 'N/A')
+        }
+        
+    except NoCredentialsError:
+        logger.error("Credenciales AWS inválidas o faltantes")
+        raise HTTPException(
+            status_code=401,
+            detail="Credenciales AWS inválidas o faltantes"
+        )
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        error_message = e.response['Error']['Message']
+        
+        logger.error(f"Error de AWS: {error_code} - {error_message}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error de AWS: {error_code} - {error_message}"
+        )
+    except Exception as e:
+        logger.error(f"Error inesperado en test de credenciales: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error probando credenciales: {str(e)}"
+        )
 
 @app.post("/test-endpoint")
 async def test_endpoint(
