@@ -32,7 +32,7 @@ cd aws-ses-api
 docker build -t aws-ses-api .
 
 # Ejecutar el contenedor
-docker run -p 8000:8000 aws-ses-api
+docker run -p 3000:3000 aws-ses-api
 ```
 
 ### Opción 2: Python Virtual Environment
@@ -104,8 +104,8 @@ Envío simplificado para casos básicos
 ## 📚 Documentación API
 
 Una vez ejecutando la aplicación, visita:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- **Swagger UI**: `http://localhost:3000/docs`
+- **ReDoc**: `http://localhost:3000/redoc`
 
 ## 🔐 Configuración AWS
 
@@ -143,7 +143,7 @@ Asegúrate de que tu dominio esté verificado en AWS SES.
 ### Variables de entorno para Coolify:
 
 ```env
-PORT=8000
+PORT=3000
 HOST=0.0.0.0
 LOG_LEVEL=INFO
 ```
@@ -153,7 +153,7 @@ LOG_LEVEL=INFO
 ### Prueba rápida con curl:
 
 ```bash
-curl -X POST "http://localhost:8000/send-simple-email" \
+curl -X POST "http://localhost:3000/send-simple-email" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "access_key=YOUR_ACCESS_KEY" \
   -d "secret_key=YOUR_SECRET_KEY" \

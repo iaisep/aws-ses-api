@@ -14,7 +14,7 @@ Esta API maneja **automáticamente la firma AWS** - tú solo envías las credenc
 ### 2. Configuración del Servicio
 - **Name**: `aws-ses-api`
 - **Type**: `Docker Application`
-- **Port**: `8000`
+- **Port**: `3000`
 - **Domain**: `ses-api.tudominio.com`
 
 ### 3. Deploy
@@ -76,7 +76,7 @@ curl -X POST "https://ses-api.tudominio.com/send-simple-email" \
 ## 🔧 Variables de Entorno (Opcionales)
 ```env
 LOG_LEVEL=INFO
-PORT=8000
+PORT=3000
 ALLOWED_ORIGINS=https://workflow.tudominio.com
 ```
 

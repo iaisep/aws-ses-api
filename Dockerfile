@@ -29,8 +29,8 @@ RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Exponer el puerto
-EXPOSE 8000
+# Exponer puerto para la aplicación
+EXPOSE 3000
 
 # Comando para ejecutar la aplicación
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
